@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Creator</title>
+    <link rel="shortcut icon" type="image/png" href="/favicon.png" />
+    <script type="module" defer>
+        import init, { run_app } from './pkg/tabletop_interactive_map_creator.js';
+
+        async function run() {
+            await init();
+
+            run_app();
+        }
+
+        run();
+    </script>
+</head>
+
+<body>
+
+</body>
+
+</html>

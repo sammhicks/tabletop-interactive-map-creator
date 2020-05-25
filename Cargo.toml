@@ -1,0 +1,17 @@
+[package]
+name = "tabletop-interactive-map-creator"
+version = "0.1.0"
+authors = ["Samuel Hicks <SamMHicks@hotmail.co.uk>"]
+edition = "2018"
+description = "An interactive browser based tabletop map creator"
+repository = "None"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+log = "0.4"
+wasm-bindgen = "0.2"
+wasm-logger = "0.2"
+yew = "0.16"
