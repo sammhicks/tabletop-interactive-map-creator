@@ -1,3 +1,5 @@
 /.vscode
 /pkg
 /target
+
+/tiles.json

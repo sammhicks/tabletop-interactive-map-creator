@@ -5,8 +5,15 @@ use std::convert::TryFrom;
 use wasm_bindgen::prelude::*;
 use yew::prelude::*;
 
-#[derive(Copy, Clone)]
-pub struct Cell {}
+mod tile;
+mod tile_chooser;
+mod tile_patterns;
+
+use tile_chooser::TileChooser;
+use tile_patterns::TilePatterns;
+
+#[derive(Clone)]
+pub struct Cell(tile::Material);
 
 #[derive(Copy, Clone, Debug)]
 pub enum ToolMode {
@@ -21,6 +28,8 @@ pub struct App {
     cells: Grid<Option<Cell>>,
     cursor_position: Option<(usize, usize)>,
     tool_mode: Option<ToolMode>,
+    current_tile: Option<tile::Material>,
+    tile_materials: tile::Materials,
 }
 
 #[derive(Debug)]
@@ -29,6 +38,8 @@ pub enum Msg {
     MouseEvent(yew::events::MouseEvent),
     MouseWheel(yew::events::WheelEvent),
     ToolSelected(ToolMode),
+    NewTiles(tile::Materials),
+    TileSelected(tile::Material),
 }
 
 impl App {
@@ -56,7 +67,7 @@ impl App {
 
         if let Some(cell) = self.cells.get_mut(y, x) {
             *cell = match tool {
-                ToolMode::Brush => Some(Cell {}),
+                ToolMode::Brush => self.current_tile.clone().map(Cell),
                 ToolMode::Erasor => None,
             };
         }
@@ -72,9 +83,11 @@ impl Component for App {
             link,
             node_ref: NodeRef::default(),
             grid_size: 16,
-            cells: Grid::new(8, 8),
+            cells: Grid::new(16, 16),
             cursor_position: None,
             tool_mode: None,
+            current_tile: None,
+            tile_materials: tile::Materials::default(),
         }
     }
 
@@ -98,6 +111,14 @@ impl Component for App {
                 self.tool_mode = Some(tool);
                 false
             }
+            Msg::NewTiles(tiles) => {
+                self.tile_materials = tiles;
+                true
+            }
+            Msg::TileSelected(tile) => {
+                self.current_tile = Some(tile);
+                false
+            }
         }
     }
 
@@ -106,8 +127,8 @@ impl Component for App {
     }
 
     fn view(&self) -> Html {
-        let width = self.grid_size * self.cells.cols();
-        let height = self.grid_size * self.cells.rows();
+        let width = self.cells.cols();
+        let height = self.cells.rows();
 
         html!(
             <>
@@ -115,26 +136,30 @@ impl Component for App {
                     <legend>{"Tools"}</legend>
                     <button onclick=self.link.callback(|_| Msg::ToolSelected(ToolMode::Brush))>{"Brush"}</button>
                     <button onclick=self.link.callback(|_| Msg::ToolSelected(ToolMode::Erasor))>{"Erasor"}</button>
+                    <TileChooser url="/tiles.json" tiles_changed=self.link.callback(Msg::NewTiles) tile_changed=self.link.callback(Msg::TileSelected)/>
                 </fieldset>
-                <svg width=width height=height ref=self.node_ref.clone()
+                <svg width={self.grid_size * width} height={self.grid_size * height} ref=self.node_ref.clone()
                     onmouseleave=self.link.callback(|_| Msg::MouseLeave)
                     onmousemove=self.link.callback(Msg::MouseEvent)
                     onmousewheel=self.link.callback(Msg::MouseWheel)
                     onmousedown=self.link.callback(Msg::MouseEvent)>
+                    <defs>
+                        <TilePatterns tiles=self.tile_materials.clone() />
+                    </defs>
                     <g transform=format!("scale({})", self.grid_size)>
                         { for self.cells.iter().enumerate().map(|(i, cell)| {
                             let x = i % self.cells.cols();
                             let y = i / self.cells.cols();
 
-                            if cell.is_some() {
-                                html!(<rect width="1px" height="1px" x=x y=y style="fill:black" /> )
+                            if let Some(Cell(tile)) = cell {
+                                html!(<rect width="1" height="1" x=x y=y style=format!("fill:{}", tile.as_url()) /> )
                             } else {
                                 html!()
                             }
                         })}
                         {
                             if let Some((x, y)) = self.cursor_position {
-                                html!( <rect width="1px" height="1px" x=x y=y style="fill:none;stroke:black;stroke-width:0.1" /> )
+                                html!( <rect width="1" height="1" x=x y=y style="fill:none;stroke:black;stroke-width:0.1" /> )
                             } else {
                                 html!()
                             }

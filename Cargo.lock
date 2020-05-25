@@ -411,12 +411,15 @@ dependencies = [
 name = "tabletop-interactive-map-creator"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "grid",
  "log",
+ "serde",
  "wasm-bindgen",
  "wasm-logger",
  "web-sys",
  "yew",
+ "yew-components",
 ]
 
 [[package]]
@@ -561,6 +564,17 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "yew-macro",
+]
+
+[[package]]
+name = "yew-components"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a2c7cc41ad8f5e5bf1a8011e12f916ca3a2f05fcf5efffd2429f30b82e31bc0"
+dependencies = [
+ "wasm-bindgen",
+ "web-sys",
+ "yew",
 ]
 
 [[package]]
