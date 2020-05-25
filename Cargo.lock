@@ -230,6 +230,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "grid"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4e29f0e1bb805d91745d2c5efb6e472cb18c7cb4dcd0c1f9de1997857737304"
+
+[[package]]
 name = "http"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -405,9 +411,11 @@ dependencies = [
 name = "tabletop-interactive-map-creator"
 version = "0.1.0"
 dependencies = [
+ "grid",
  "log",
  "wasm-bindgen",
  "wasm-logger",
+ "web-sys",
  "yew",
 ]
 
