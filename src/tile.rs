@@ -1,29 +1,46 @@
 use std::rc::Rc;
 
-#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
-pub struct Material {
+#[derive(Debug, serde::Deserialize)]
+pub struct MaterialInner {
     name: String,
-    pub href: String,
-    pub size: usize,
+    href: String,
+    size: usize,
 }
 
+#[derive(Clone, Debug, serde::Deserialize)]
+pub struct Material(Rc<MaterialInner>);
+
 impl Material {
-    pub fn get_name(&self) -> String {
-        format!("tile{}", self.name)
+    pub fn name(&self) -> String {
+        format!("tile{}", self.0.name)
     }
 
-    pub fn as_url(&self) -> String {
-        format!("url(#tile{})", self.name)
+    pub fn url_reference(&self) -> String {
+        format!("url(#tile{})", self.0.name)
+    }
+
+    pub fn href(&self) -> String {
+        self.0.href.clone()
+    }
+
+    pub fn size(&self) -> usize {
+        self.0.size
     }
 }
 
 impl std::fmt::Display for Material {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.name)
+        f.write_str(&self.0.name)
     }
 }
 
-#[derive(Clone, Debug, Default)]
+impl std::cmp::PartialEq for Material {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+#[derive(Clone, Debug, Default, serde::Deserialize)]
 pub struct Materials(Rc<Vec<Material>>);
 
 impl Materials {
@@ -32,15 +49,8 @@ impl Materials {
     }
 }
 
-impl std::ops::Deref for Materials {
-    type Target = [Material];
-    fn deref(&self) -> &[Material] {
-        self.0.deref()
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for Materials {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        Ok(Self(Rc::new(Vec::<Material>::deserialize(deserializer)?)))
+impl std::convert::AsRef<[Material]> for Materials {
+    fn as_ref(&self) -> &[Material] {
+        self.0.as_ref()
     }
 }

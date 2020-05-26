@@ -33,11 +33,11 @@ impl Component for TilePatterns {
     fn view(&self) -> Html {
         html!(
             <>
-                { for self.props.tiles.iter().map(|material| {
-                    let size = material.size;
+                { for self.props.tiles.as_ref().iter().map(|material| {
+                    let size = material.size();
                     html!(
-                        <pattern id=material.get_name() patternUnits="userSpaceOnUse" height=size width=size>
-                            <image href=material.href.clone() width=size height=size />
+                        <pattern id=material.name() patternUnits="userSpaceOnUse" height=size width=size>
+                            <image href=material.href() width=size height=size />
                         </pattern>
                     )
                 }) }
