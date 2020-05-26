@@ -14,16 +14,14 @@ use grid::Grid;
 use tile_chooser::TileChooser;
 use tile_patterns::TilePatterns;
 
-#[derive(Clone, PartialEq)]
-pub struct Cell(tile::Material);
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ToolMode {
     Brush,
     Erasor,
+    Fill,
 }
 
-type Cells = Grid<Option<Cell>>;
+type Cells = Grid<Option<tile::Material>>;
 
 pub struct App {
     link: ComponentLink<Self>,
@@ -52,30 +50,8 @@ pub enum Msg {
 }
 
 impl App {
-    fn mouse_event(&mut self, ev: yew::events::MouseEvent) {
-        let elem = self
-            .node_ref
-            .cast::<web_sys::Element>()
-            .unwrap()
-            .get_bounding_client_rect();
-
-        let x = ((ev.x() - (elem.x() as i32)) / (self.grid_size as i32)) as usize;
-        let y = ((ev.y() - (elem.y() as i32)) / (self.grid_size as i32)) as usize;
-
-        self.cursor_position = Some((x, y));
-
-        if (ev.buttons() & 1) == 0 {
-            return;
-        }
-
-        if let Some(new_cells) = self.cells.set(
-            y,
-            x,
-            match self.current_tool {
-                ToolMode::Brush => self.current_tile.clone().map(Cell),
-                ToolMode::Erasor => None,
-            },
-        ) {
+    fn set_cell(&mut self, row: usize, col: usize, cell: Option<tile::Material>) {
+        if let Some(new_cells) = self.cells.set(row, col, cell) {
             if self.cells != new_cells {
                 self.redo = Vec::new();
                 self.undo
@@ -84,15 +60,77 @@ impl App {
         }
     }
 
+    fn mouse_event(&mut self, ev: yew::events::MouseEvent) {
+        let elem = self
+            .node_ref
+            .cast::<web_sys::Element>()
+            .unwrap()
+            .get_bounding_client_rect();
+
+        let row = ((ev.y() - (elem.y() as i32)) / (self.grid_size as i32)) as usize;
+        let col = ((ev.x() - (elem.x() as i32)) / (self.grid_size as i32)) as usize;
+
+        self.cursor_position = Some((row, col));
+
+        if (ev.buttons() & 1) == 0 {
+            return;
+        }
+
+        match self.current_tool {
+            ToolMode::Brush => self.set_cell(row, col, self.current_tile.clone()),
+            ToolMode::Erasor => self.set_cell(row, col, None),
+            ToolMode::Fill => {
+                if let Some(first_cell) = self.cells.get(row, col) {
+                    let mut new_cells = self.cells.clone();
+
+                    let mut indices = vec![(row, col)];
+
+                    while let Some((row, col)) = indices.pop() {
+                        if Some(first_cell) != self.cells.get(row, col) {
+                            continue;
+                        }
+
+                        if let Some(next_cells) = new_cells.set(row, col, self.current_tile.clone())
+                        {
+                            if new_cells != next_cells {
+                                let left = col.checked_sub(1);
+                                let up = row.checked_sub(1);
+                                let right = col.checked_add(1);
+                                let down = row.checked_add(1);
+
+                                for coords in &[
+                                    (Some(row), left),
+                                    (Some(row), right),
+                                    (up, Some(col)),
+                                    (down, Some(col)),
+                                ] {
+                                    if let (Some(row), Some(col)) = coords {
+                                        indices.push((*row, *col));
+                                    }
+                                }
+                            }
+                            new_cells = next_cells;
+                        }
+                    }
+
+                    if new_cells != self.cells {
+                        self.undo
+                            .push(std::mem::replace(&mut self.cells, new_cells))
+                    }
+                }
+            }
+        }
+    }
+
     fn cursor(&self) -> Html {
-        if let Some((x, y)) = self.cursor_position {
+        if let Some((row, col)) = self.cursor_position {
             if self.current_tool != ToolMode::Erasor {
                 if let Some(tile) = &self.current_tile {
-                    return html!(<rect width="1" height="1" x=x y=y style=format!("fill:{}", tile.url_reference()) />);
+                    return html!(<rect width="1" height="1" x=col y=row style=format!("fill:{}", tile.url_reference()) />);
                 }
             }
 
-            html!(<rect width="1" height="1" x=x y=y style="fill:none;stroke:black;stroke-width:0.1" />)
+            html!(<rect width="1" height="1" x=col y=row style="fill:none;stroke:black;stroke-width:0.1" />)
         } else {
             html!()
         }
@@ -194,6 +232,7 @@ impl Component for App {
                     <button onclick=self.link.callback(|_| Msg::Clear)>{"Clear"}</button>
                     <button class=self.button_class(ToolMode::Brush) onclick=self.link.callback(|_| Msg::ToolSelected(ToolMode::Brush))>{"Brush"}</button>
                     <button class=self.button_class(ToolMode::Erasor) onclick=self.link.callback(|_| Msg::ToolSelected(ToolMode::Erasor))>{"Erasor"}</button>
+                    <button class=self.button_class(ToolMode::Fill) onclick=self.link.callback(|_| Msg::ToolSelected(ToolMode::Fill))>{"Fill"}</button>
                     <TileChooser url="/tiles.json" tiles_changed=self.link.callback(Msg::NewTiles) tile_changed=self.link.callback(Msg::TileSelected)/>
                     <button onclick=self.link.callback(|_| Msg::Undo)>{"Undo"}</button>
                     <button onclick=self.link.callback(|_| Msg::Redo)>{"Redo"}</button>
@@ -207,9 +246,9 @@ impl Component for App {
                         <TilePatterns tiles=self.tile_materials.clone() />
                     </defs>
                     <g transform=format!("scale({})", self.grid_size)>
-                        { for self.cells.iter().map(|(y, x, cell)| {
-                            if let Some(Cell(tile)) = cell {
-                                html!(<rect width="1" height="1" x=x y=y style=format!("fill:{}", tile.url_reference()) /> )
+                        { for self.cells.iter().map(|(row, col, cell)| {
+                            if let Some(tile) = cell {
+                                html!(<rect width="1" height="1" x=col y=row style=format!("fill:{}", tile.url_reference()) /> )
                             } else {
                                 html!()
                             }

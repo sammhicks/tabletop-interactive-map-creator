@@ -32,16 +32,26 @@ impl<T> Grid<T> {
                 .map(move |(col, cell)| (row, col, cell))
         })
     }
+
+    pub fn get(&self, row: usize, col: usize) -> Option<&T> {
+        self.cells.get(row).and_then(|c| c.get(col))
+    }
 }
 
 impl<T: Clone + PartialEq> Grid<T> {
     pub fn set(&self, row: usize, col: usize, value: T) -> Option<Self> {
-        let new_row = self.cells.get(row)?.set(col, value)?;
+        let old_row = self.cells.get(row)?;
+
+        let new_row = old_row.set(col, value)?;
 
         Some(Self {
             rows: self.rows,
             cols: self.cols,
-            cells: self.cells.set(row, new_row)?,
+            cells: if *old_row == new_row {
+                self.cells.clone()
+            } else {
+                self.cells.set(row, new_row)?
+            },
         })
     }
 }
