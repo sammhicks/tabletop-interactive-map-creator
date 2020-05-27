@@ -12,10 +12,19 @@
         async function run() {
             await init();
 
-            run_app();
+            let tilesUrl = "/tiles.json";
+
+            let response = await fetch(tilesUrl);
+            if (response.ok == false) {
+                throw "Could not fetch tile materials from \"" + tilesUrl + "\": " + response.statusText;
+            }
+
+            run_app(await response.text());
         }
 
-        run();
+        run().catch(function handleError(err) {
+            document.body.innerText = err;
+        });
     </script>
     <style>
         body,
@@ -32,8 +41,23 @@
             border: 1px solid black;
         }
 
-        button.selected {
+        table {
+            border-collapse: collapse;
+        }
+
+        .selected {
             font-weight: bold;
+        }
+
+        tr {
+            color: black;
+            background: white;
+        }
+
+        tr.selected * {
+            font-weight: bold;
+            color: white;
+            background: navy;
         }
     </style>
 </head>

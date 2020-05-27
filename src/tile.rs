@@ -44,6 +44,10 @@ impl std::cmp::PartialEq for Material {
 pub struct Materials(Rc<Vec<Material>>);
 
 impl Materials {
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     pub fn as_vec(&self) -> Vec<Material> {
         self.0.as_ref().clone()
     }
